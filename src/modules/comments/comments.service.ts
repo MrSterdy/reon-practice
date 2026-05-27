@@ -1,11 +1,65 @@
-import { Injectable } from '@nestjs/common';
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
+import { PostsService } from '../posts/posts.service';
+import { CreateCommentDto, UpdateCommentDto } from './dto';
+import { CommentDocument } from './comments.model';
 import { CommentsRepository } from './comments.repository';
 
 @Injectable()
 export class CommentsService {
-    constructor(private readonly commentsRepository: CommentsRepository) { }
+    constructor(
+        private readonly commentsRepository: CommentsRepository,
+        private readonly postsService: PostsService,
+    ) {}
 
-    public async create(): Promise<void> { }
+    async create(dto: CreateCommentDto): Promise<CommentDocument> {
+        await this.postsService.findOne(dto.postId);
+        return this.commentsRepository.create(dto);
+    }
 
-    public async findAllByPostID(): Promise<void> { }
+    async findAllByPostId(postId: number): Promise<CommentDocument[]> {
+        await this.postsService.findOne(postId);
+        return this.commentsRepository.findAllByPostId(postId);
+    }
+
+    async findOne(id: string): Promise<CommentDocument> {
+        const comment = await this.commentsRepository.findById(id);
+        if (!comment) {
+            throw new NotFoundException(
+                `Комментарий с номером "${id}" не найден`,
+            );
+        }
+        return comment;
+    }
+
+    async update(
+        id: string,
+        dto: UpdateCommentDto,
+    ): Promise<CommentDocument> {
+        if (Object.keys(dto).length === 0) {
+            throw new BadRequestException(
+                'Необходимо указать хотя бы одно поле для обновления',
+            );
+        }
+
+        const comment = await this.commentsRepository.update(id, dto);
+        if (!comment) {
+            throw new NotFoundException(
+                `Комментарий с номером "${id}" не найден`,
+            );
+        }
+        return comment;
+    }
+
+    async remove(id: string): Promise<void> {
+        const deleted = await this.commentsRepository.remove(id);
+        if (!deleted) {
+            throw new NotFoundException(
+                `Комментарий с номером "${id}" не найден`,
+            );
+        }
+    }
 }
