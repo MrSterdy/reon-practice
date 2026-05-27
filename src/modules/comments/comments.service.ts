@@ -7,6 +7,7 @@ import { PostsService } from '../posts/posts.service';
 import { CreateCommentDto, UpdateCommentDto } from './dto';
 import { CommentDocument } from './comments.model';
 import { CommentsRepository } from './comments.repository';
+import { assertCommentTextValidForRating } from './validators/comment-text-by-rating.validator';
 
 @Injectable()
 export class CommentsService {
@@ -17,7 +18,10 @@ export class CommentsService {
 
     async create(dto: CreateCommentDto): Promise<CommentDocument> {
         await this.postsService.findOne(dto.postId);
-        return this.commentsRepository.create(dto);
+        return this.commentsRepository.create({
+            ...dto,
+            text: dto.text ?? '',
+        });
     }
 
     async findAllByPostId(postId: number): Promise<CommentDocument[]> {
@@ -44,6 +48,12 @@ export class CommentsService {
                 'Необходимо указать хотя бы одно поле для обновления',
             );
         }
+
+        const existing = await this.findOne(id);
+        const rating = dto.rating ?? existing.rating;
+        const text = dto.text !== undefined ? dto.text : existing.text;
+
+        assertCommentTextValidForRating(text, rating);
 
         const comment = await this.commentsRepository.update(id, dto);
         if (!comment) {
