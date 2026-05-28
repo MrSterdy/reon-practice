@@ -18,10 +18,7 @@ export class CommentsService {
 
     async create(dto: CreateCommentDto): Promise<CommentDocument> {
         await this.postsService.findOne(dto.postId);
-        return this.commentsRepository.create({
-            ...dto,
-            text: dto.text ?? '',
-        });
+        return this.commentsRepository.create(dto);
     }
 
     async findAllByPostId(postId: number): Promise<CommentDocument[]> {
